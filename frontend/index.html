@@ -1636,9 +1636,18 @@
 
         function logout() {
             token = '';
+            currentUser = null;
             localStorage.removeItem('wt_token');
             document.getElementById('app-screen').style.display = 'none';
             document.getElementById('auth-screen').style.display = 'flex';
+            // Clear all form fields
+            document.getElementById('login-email').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('reg-name').value = '';
+            document.getElementById('reg-email').value = '';
+            document.getElementById('reg-password').value = '';
+            document.getElementById('auth-error').style.display = 'none';
+            switchTab('login');
         }
 
         async function enterApp() {

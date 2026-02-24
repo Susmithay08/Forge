@@ -1570,7 +1570,7 @@
     </div>
 
     <script>
-        const API = '';
+        const API = window.location.hostname === 'localhost' ? '' : 'https://forge-r3uc.onrender.com';
         let token = localStorage.getItem('wt_token') || '';
         let currentUser = null;
         let allExercises = [];

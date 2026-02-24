@@ -1,0 +1,325 @@
+openapi: 3.0.3
+info:
+  title: FORGE — Workout Tracker API
+  description: |
+    RESTful API for the FORGE Workout Tracker. 
+    Allows users to register, log in, manage workouts, track exercises, and generate progress reports.
+    
+    ## Authentication
+    Use JWT Bearer tokens. Obtain a token via `/auth/register` or `/auth/login`, then include it as:
+    ```
+    Authorization: Bearer <your-token>
+    ```
+  version: "1.0.0"
+  contact:
+    name: FORGE Workout Tracker
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        created_at: { type: string, format: date-time }
+
+    Exercise:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string, example: "Bench Press" }
+        description: { type: string }
+        category: { type: string, enum: [strength, cardio, flexibility] }
+        muscle_group: { type: string, example: "chest" }
+
+    WorkoutItem:
+      type: object
+      properties:
+        id: { type: integer }
+        exercise_id: { type: integer }
+        exercise: { $ref: '#/components/schemas/Exercise' }
+        sets: { type: integer, example: 3 }
+        reps: { type: integer, example: 10 }
+        weight: { type: number, example: 60.0, description: "Weight in kg" }
+        duration: { type: integer, example: 60, description: "Duration in seconds (for cardio)" }
+        notes: { type: string }
+        order: { type: integer }
+
+    Workout:
+      type: object
+      properties:
+        id: { type: integer }
+        user_id: { type: integer }
+        name: { type: string, example: "Push Day" }
+        description: { type: string }
+        scheduled_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }
+        status: { type: string, enum: [pending, active, completed] }
+        notes: { type: string }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/WorkoutItem' }
+
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user: { $ref: '#/components/schemas/User' }
+
+    WorkoutReport:
+      type: object
+      properties:
+        total_workouts: { type: integer }
+        completed_count: { type: integer }
+        total_volume_kg: { type: number }
+        avg_workouts_per_week: { type: number }
+        most_used_exercises:
+          type: array
+          items:
+            type: object
+            properties:
+              exercise_name: { type: string }
+              count: { type: integer }
+              max_weight: { type: number }
+        weekly_progress:
+          type: array
+          items:
+            type: object
+            properties:
+              week: { type: string, example: "2024-W01" }
+              workout_count: { type: integer }
+              total_volume_kg: { type: number }
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string, minLength: 2, example: "John Doe" }
+                email: { type: string, format: email, example: "john@example.com" }
+                password: { type: string, minLength: 6, example: "securepassword" }
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { description: Validation error }
+        '409': { description: Email already exists }
+
+  /auth/login:
+    post:
+      summary: Login with email and password
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, example: "john@example.com" }
+                password: { type: string, example: "securepassword" }
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401': { description: Invalid credentials }
+
+  /auth/me:
+    get:
+      summary: Get current user profile
+      tags: [Authentication]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { description: Unauthorized }
+
+  /exercises:
+    get:
+      summary: List all exercises
+      tags: [Exercises]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string, enum: [strength, cardio, flexibility] }
+          description: Filter by category
+        - name: muscle_group
+          in: query
+          schema: { type: string }
+          description: Filter by muscle group (e.g. chest, back, legs)
+      responses:
+        '200':
+          description: List of exercises
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Exercise' }
+
+  /exercises/{id}:
+    get:
+      summary: Get a single exercise
+      tags: [Exercises]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Exercise' }
+        '404': { description: Not found }
+
+  /workouts:
+    get:
+      summary: List user's workouts
+      tags: [Workouts]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, active, completed] }
+          description: Filter by status
+      responses:
+        '200':
+          description: Workouts sorted by scheduled_at
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Workout' }
+    post:
+      summary: Create a new workout
+      tags: [Workouts]
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, example: "Push Day" }
+                description: { type: string }
+                scheduled_at: { type: string, format: date-time }
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      exercise_id: { type: integer }
+                      sets: { type: integer }
+                      reps: { type: integer }
+                      weight: { type: number }
+                      duration: { type: integer }
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Workout' }
+
+  /workouts/report:
+    get:
+      summary: Get progress report
+      description: Returns stats about completed workouts, volume, and trends
+      tags: [Workouts]
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkoutReport' }
+
+  /workouts/{id}:
+    get:
+      summary: Get a single workout
+      tags: [Workouts]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Workout' }
+        '404': { description: Not found or not owned by user }
+
+    put:
+      summary: Update a workout
+      tags: [Workouts]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                description: { type: string }
+                scheduled_at: { type: string, format: date-time }
+                status: { type: string, enum: [pending, active, completed] }
+                notes: { type: string }
+                items: { type: array }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Workout' }
+
+    delete:
+      summary: Delete a workout
+      tags: [Workouts]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { description: Deleted successfully }
+        '404': { description: Not found }

@@ -1,0 +1,32 @@
+# Environment variables - NEVER commit this
+.env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Go build output
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+workout-tracker
+
+# Go test cache
+*.test
+*.out
+
+# Go dependency cache
+vendor/
+
+# VSCode
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

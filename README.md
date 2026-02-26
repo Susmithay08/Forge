@@ -1,6 +1,6 @@
 # 🏋️ FORGE — Workout Tracker
 
-> **[🚀 Live Demo](https://workout-tracker.vercel.app)** ← replace with your Vercel URL
+> **[🚀 Live Demo]: https://forge-bysush.vercel.app/
 
 ![FORGE Workout Tracker](live.png)
 
